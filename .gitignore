@@ -1,0 +1,35 @@
+# csv2db.gitignore.251109.170800
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+.env
+*.egg-info/
+
+# Logs
+logs/
+*.log
+
+# SQLite and temp
+target/*.sqlite
+target/*.db
+*.tmp
+*.bak
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Config secrets
+config/secrets/
+
+# CSV policy:
+# Keep source CSVs out of git by default.
+# If you need to commit an example, whitelist it explicitly.
+source/
+!source/.gitkeep
+
+# Exports: usually keep out; whitelist if needed.
+target/exports/
+!target/exports/.gitkeep

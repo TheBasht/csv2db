@@ -1,0 +1,20 @@
+{
+  "//": "csv2db.app.config.251109.170800",
+  "utc": true,
+  "pattern": "*.csv",
+  "source_dir": "source",
+  "target_db": "target/warehouse.sqlite",
+  "batch_rows": 50000,
+  "batch_rows_min": 10000,
+  "batch_rows_max": 200000,
+  "batch_autotune": true,
+  "wal": true,
+  "pragma": {
+    "synchronous": "NORMAL",
+    "temp_store": "MEMORY",
+    "mmap_size": 268435456,
+    "cache_size_kb": 262144
+  },
+  "log_flush_interval_ms": 500,
+  "ingest_ver": "v1.0.0-251109.170800"
+}
