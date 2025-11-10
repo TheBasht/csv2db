@@ -16,5 +16,8 @@
     "cache_size_kb": 262144
   },
   "log_flush_interval_ms": 500,
-  "ingest_ver": "v1.0.0-251109.170800"
+  "ingest_ver": "v1.0.0-251109.170800",
+  "move_processed": true,
+  "processed_subdir": "_processed",
+  "failed_subdir": "_failed"
 }

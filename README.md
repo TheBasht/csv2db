@@ -55,3 +55,6 @@ Unique index on raw_hash prevents duplicate inserts on replay.
 - All values ingested as TEXT. No date parsing.
 - Hostname remaps or normalization belong in SQL later.
 - Keep large CSVs and sqlite files out of Git. See .gitignore.
+- After a successful load, each processed CSV is moved to source/_processed/.
+- If an error occurs while processing a file, it is moved to source/_failed/.
+- Disable this behavior by setting "move_processed": false in config.

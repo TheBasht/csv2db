@@ -3,7 +3,7 @@
 # Scope: CSV streaming ingest only. Modes: --load, --test. QA/exports later.
 
 from __future__ import annotations
-import argparse, csv, hashlib, json, os, re, sqlite3, sys, time, glob
+import argparse, csv, hashlib, json, os, re, sqlite3, sys, time, glob, shutil
 from pathlib import Path
 from datetime import datetime, timezone
 from itertools import islice
@@ -12,6 +12,24 @@ from itertools import islice
 # [SECTION: UTIL]
 # -----------------------------
 APP_TS = datetime.utcnow().strftime("%y%m%d.%H%M%S")
+
+def ensure_dir(p: Path) -> None:
+    p.mkdir(parents=True, exist_ok=True)
+
+def timestamp_tag() -> str:
+    return datetime.utcnow().strftime("%y%m%d.%H%M%S")
+
+def safe_move(src: Path, dst_dir: Path) -> Path:
+    """Move src into dst_dir; if name exists, append .YYMMDD.HHMMSS before extension."""
+    ensure_dir(dst_dir)
+    target = dst_dir / src.name
+    if target.exists():
+        stem = src.stem
+        suf = src.suffix
+        tagged = f"{stem}.{timestamp_tag()}{suf}"
+        target = dst_dir / tagged
+    shutil.move(str(src), str(target))
+    return target
 
 def utc_now_iso() -> str:
     return datetime.utcnow().replace(tzinfo=timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f +0000")
@@ -63,6 +81,9 @@ def load_config(path: Path) -> dict:
     cfg.setdefault("batch_autotune", True)
     cfg.setdefault("log_flush_interval_ms", 500)
     cfg.setdefault("ingest_ver", f"v1.0.0-{APP_TS}")
+    cfg.setdefault("move_processed", True)
+    cfg.setdefault("processed_subdir", "_processed")
+    cfg.setdefault("failed_subdir", "_failed")
     return cfg
 
 # -----------------------------
@@ -429,11 +450,32 @@ def main():
     if args.load:
         total_seen = total_inserted = total_dup = 0
         t0 = time.time()
+
+        # Prepare processed/failed dirs
+        move_enabled = bool(cfg.get("move_processed", True))
+        processed_dir = source_dir / str(cfg.get("processed_subdir", "_processed"))
+        failed_dir = source_dir / str(cfg.get("failed_subdir", "_failed"))
+        if move_enabled:
+            ensure_dir(processed_dir)
+            ensure_dir(failed_dir)
+
         for fp in files:
             info(f"Begin file: {fp.name}")
-            seen, ins, dup = ingest_file(conn, cfg, fp, targets, pairs)
-            total_seen += seen; total_inserted += ins; total_dup += dup
-            info(f"End file: {fp.name} seen={seen} inserted={ins} deduped={dup}")
+            try:
+                seen, ins, dup = ingest_file(conn, cfg, fp, targets, pairs)
+                total_seen += seen; total_inserted += ins; total_dup += dup
+                info(f"End file: {fp.name} seen={seen} inserted={ins} deduped={dup}")
+                if move_enabled:
+                    moved = safe_move(fp, processed_dir)
+                    info(f"Moved to: {moved}")
+            except Exception as e:
+                info(f"Error on file: {fp.name} -> {e.__class__.__name__}: {e}")
+                if move_enabled and fp.exists():
+                    moved = safe_move(fp, failed_dir)
+                    info(f"Moved to FAILED bin: {moved}")
+                # continue with next file
+                continue
+
         t1 = time.time()
         info(f"LOAD SUMMARY files={len(files)} seen={total_seen} inserted={total_inserted} deduped={total_dup} elapsed_sec={round(t1-t0,2)}")
         return

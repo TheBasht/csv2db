@@ -33,3 +33,7 @@ source/
 # Exports: usually keep out; whitelist if needed.
 target/exports/
 !target/exports/.gitkeep
+
+# Processed/failed bins
+source/_processed/
+source/_failed/
